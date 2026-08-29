@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QrBancoEconomico.Api/QrBancoEconomico.Api.csproj" />
+    <Project Path="src/QrBancoEconomico.Application/QrBancoEconomico.Application.csproj" />
+    <Project Path="src/QrBancoEconomico.Domain/QrBancoEconomico.Domain.csproj" />
+    <Project Path="src/QrBancoEconomico.Infrastructure/QrBancoEconomico.Infrastructure.csproj" />
+  </Folder>
+</Solution>
