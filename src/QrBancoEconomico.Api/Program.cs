@@ -10,6 +10,15 @@ using Serilog.Context;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+// Configure Kestrel to listen on a port specified in configuration (appsettings.json)
+builder.WebHost.ConfigureKestrel((context, options) =>
+{
+    var port = context.Configuration.GetValue<int?>("Service:Port");
+    if (port.HasValue && port.Value > 0)
+    {
+        options.ListenAnyIP(port.Value);
+    }
+});
 builder.Configuration.AddDotEnvFileIfPresent(builder.Environment.ContentRootPath);
 builder.Host.UseSerilog((_, _, loggerConfiguration) => loggerConfiguration
     .MinimumLevel.Information()
