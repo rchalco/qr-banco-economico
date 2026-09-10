@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QrBancoEconomico.Infrastructure;
 
@@ -11,9 +12,11 @@ using QrBancoEconomico.Infrastructure;
 namespace QrBancoEconomico.Infrastructure.Migrations
 {
     [DbContext(typeof(BanecoDbContext))]
-    partial class BanecoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906231305_ApiKeyAsGuid")]
+    partial class ApiKeyAsGuid
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

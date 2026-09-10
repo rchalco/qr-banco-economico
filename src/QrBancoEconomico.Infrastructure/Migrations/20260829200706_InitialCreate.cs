@@ -11,105 +11,69 @@ namespace QrBancoEconomico.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "BatchUploads",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    BatchId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DetailedDebit = table.Column<bool>(type: "bit", nullable: false),
-                    AccountCodeEncrypted = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    PaymentCount = table.Column<int>(type: "int", nullable: false),
-                    BankBatchId = table.Column<long>(type: "bigint", nullable: true),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_BatchUploads", x => x.Id);
-                });
+            migrationBuilder.CreateTableIfMissing("BatchUploads", """
+                    [Id] uniqueidentifier NOT NULL,
+                    [BatchId] nvarchar(450) NOT NULL,
+                    [Type] nvarchar(max) NOT NULL,
+                    [Description] nvarchar(max) NOT NULL,
+                    [DetailedDebit] bit NOT NULL,
+                    [AccountCodeEncrypted] nvarchar(max) NOT NULL,
+                    [Currency] nvarchar(max) NOT NULL,
+                    [Amount] decimal(18,2) NOT NULL,
+                    [PaymentCount] int NOT NULL,
+                    [BankBatchId] bigint NULL,
+                    [CreatedAt] datetimeoffset NOT NULL,
+                    CONSTRAINT [PK_BatchUploads] PRIMARY KEY ([Id])
+            """);
 
-            migrationBuilder.CreateTable(
-                name: "QrTransactions",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MerchantTransactionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    BankQrId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    AccountCreditEncrypted = table.Column<string>(type: "nvarchar(1024)", maxLength: 1024, nullable: false),
-                    Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DueDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    SingleUse = table.Column<bool>(type: "bit", nullable: false),
-                    ModifyAmount = table.Column<bool>(type: "bit", nullable: false),
-                    BranchCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    QrImageBase64 = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_QrTransactions", x => x.Id);
-                });
+            migrationBuilder.CreateTableIfMissing("QrTransactions", """
+                    [Id] uniqueidentifier NOT NULL,
+                    [MerchantTransactionId] nvarchar(100) NOT NULL,
+                    [BankQrId] nvarchar(450) NULL,
+                    [AccountCreditEncrypted] nvarchar(1024) NOT NULL,
+                    [Currency] nvarchar(3) NOT NULL,
+                    [Amount] decimal(18,2) NOT NULL,
+                    [Description] nvarchar(max) NULL,
+                    [DueDate] date NOT NULL,
+                    [SingleUse] bit NOT NULL,
+                    [ModifyAmount] bit NOT NULL,
+                    [BranchCode] nvarchar(max) NULL,
+                    [Status] int NOT NULL,
+                    [QrImageBase64] nvarchar(max) NULL,
+                    [CreatedAt] datetimeoffset NOT NULL,
+                    CONSTRAINT [PK_QrTransactions] PRIMARY KEY ([Id])
+            """);
 
-            migrationBuilder.CreateTable(
-                name: "QrPayments",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    QrTransactionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    QrId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    TransactionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PaymentDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    PaymentTime = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
-                    SenderBankCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SenderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SenderDocumentId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SenderAccount = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    BranchCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReceivedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_QrPayments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_QrPayments_QrTransactions_QrTransactionId",
-                        column: x => x.QrTransactionId,
-                        principalTable: "QrTransactions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.CreateTableIfMissing("QrPayments", """
+                    [Id] uniqueidentifier NOT NULL,
+                    [QrTransactionId] uniqueidentifier NOT NULL,
+                    [QrId] nvarchar(100) NOT NULL,
+                    [TransactionId] nvarchar(max) NULL,
+                    [PaymentDate] date NOT NULL,
+                    [PaymentTime] nvarchar(max) NULL,
+                    [Currency] nvarchar(max) NOT NULL,
+                    [Amount] decimal(18,2) NOT NULL,
+                    [SenderBankCode] nvarchar(max) NULL,
+                    [SenderName] nvarchar(max) NULL,
+                    [SenderDocumentId] nvarchar(max) NULL,
+                    [SenderAccount] nvarchar(max) NULL,
+                    [Description] nvarchar(max) NULL,
+                    [BranchCode] nvarchar(max) NULL,
+                    [ReceivedAt] datetimeoffset NOT NULL,
+                    CONSTRAINT [PK_QrPayments] PRIMARY KEY ([Id])
+            """);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_BatchUploads_BatchId",
-                table: "BatchUploads",
-                column: "BatchId",
-                unique: true);
+            migrationBuilder.AddForeignKeyIfMissing("FK_QrPayments_QrTransactions_QrTransactionId",
+                "QrPayments", "QrTransactionId", "QrTransactions", "Id", "CASCADE");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_QrPayments_QrTransactionId",
-                table: "QrPayments",
-                column: "QrTransactionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_QrTransactions_BankQrId",
-                table: "QrTransactions",
-                column: "BankQrId",
-                unique: true,
-                filter: "[BankQrId] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_QrTransactions_MerchantTransactionId",
-                table: "QrTransactions",
-                column: "MerchantTransactionId",
-                unique: true);
+            migrationBuilder.CreateIndexIfMissing("IX_BatchUploads_BatchId", "BatchUploads",
+                "UNIQUE INDEX [IX_BatchUploads_BatchId] ON [BatchUploads] ([BatchId])");
+            migrationBuilder.CreateIndexIfMissing("IX_QrPayments_QrTransactionId", "QrPayments",
+                "INDEX [IX_QrPayments_QrTransactionId] ON [QrPayments] ([QrTransactionId])");
+            migrationBuilder.CreateIndexIfMissing("IX_QrTransactions_BankQrId", "QrTransactions",
+                "UNIQUE INDEX [IX_QrTransactions_BankQrId] ON [QrTransactions] ([BankQrId]) WHERE [BankQrId] IS NOT NULL");
+            migrationBuilder.CreateIndexIfMissing("IX_QrTransactions_MerchantTransactionId", "QrTransactions",
+                "UNIQUE INDEX [IX_QrTransactions_MerchantTransactionId] ON [QrTransactions] ([MerchantTransactionId])");
         }
 
         /// <inheritdoc />

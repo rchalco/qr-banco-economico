@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QrBancoEconomico.Infrastructure;
 
@@ -11,9 +12,11 @@ using QrBancoEconomico.Infrastructure;
 namespace QrBancoEconomico.Infrastructure.Migrations
 {
     [DbContext(typeof(BanecoDbContext))]
-    partial class BanecoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906204601_AddSubscriberApiKeys")]
+    partial class AddSubscriberApiKeys
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,59 +24,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("QrBancoEconomico.Domain.BanecoAccount", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AccountCodeEncrypted")
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
-                    b.Property<string>("AuthPasswordEncrypted")
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
-                    b.Property<string>("AuthUserNameEncrypted")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<string>("BatchDebitAccountEncrypted")
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("CredentialRef")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTimeOffset?>("CredentialsVerifiedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("BanecoAccounts", (string)null);
-                });
 
             modelBuilder.Entity("QrBancoEconomico.Domain.BatchUpload", b =>
                 {
@@ -88,9 +38,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid?>("BanecoAccountId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long?>("BankBatchId")
                         .HasColumnType("bigint");
@@ -124,10 +71,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("BanecoAccountId", "BatchId")
-                        .IsUnique()
-                        .HasFilter("[BanecoAccountId] IS NOT NULL");
 
                     b.HasIndex("SubscriberId", "BatchId")
                         .IsUnique()
@@ -210,9 +153,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("BanecoAccountId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("BankQrId")
                         .HasColumnType("nvarchar(450)");
 
@@ -259,10 +199,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[BankQrId] IS NOT NULL");
 
-                    b.HasIndex("BanecoAccountId", "MerchantTransactionId")
-                        .IsUnique()
-                        .HasFilter("[BanecoAccountId] IS NOT NULL");
-
                     b.HasIndex("SubscriberId", "MerchantTransactionId")
                         .IsUnique()
                         .HasFilter("[SubscriberId] IS NOT NULL");
@@ -299,10 +235,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Property<int>("RequestsPerMinute")
                         .HasColumnType("int");
 
-                    b.Property<string>("SavingsAccountEncrypted")
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -315,9 +247,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ApiKey")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -338,6 +267,11 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LastUsedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -346,12 +280,16 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
+                    b.Property<byte[]>("SecretHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(32)");
+
                     b.Property<Guid>("SubscriberId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApiKey")
+                    b.HasIndex("PublicId")
                         .IsUnique();
 
                     b.HasIndex("SubscriberId");
@@ -359,49 +297,12 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.ToTable("SubscriberApiKeys", (string)null);
                 });
 
-            modelBuilder.Entity("QrBancoEconomico.Domain.SubscriberBanecoAccount", b =>
-                {
-                    b.Property<Guid>("SubscriberId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("BanecoAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("GrantedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("GrantedBy")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.HasKey("SubscriberId", "BanecoAccountId");
-
-                    b.HasIndex("BanecoAccountId");
-
-                    b.HasIndex("SubscriberId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_SubscriberBanecoAccounts_Default")
-                        .HasFilter("[IsDefault] = 1");
-
-                    b.ToTable("SubscriberBanecoAccounts", (string)null);
-                });
-
             modelBuilder.Entity("QrBancoEconomico.Domain.BatchUpload", b =>
                 {
-                    b.HasOne("QrBancoEconomico.Domain.BanecoAccount", "BanecoAccount")
-                        .WithMany()
-                        .HasForeignKey("BanecoAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("QrBancoEconomico.Domain.Subscriber", "Subscriber")
                         .WithMany()
                         .HasForeignKey("SubscriberId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("BanecoAccount");
 
                     b.Navigation("Subscriber");
                 });
@@ -419,17 +320,10 @@ namespace QrBancoEconomico.Infrastructure.Migrations
 
             modelBuilder.Entity("QrBancoEconomico.Domain.QrTransaction", b =>
                 {
-                    b.HasOne("QrBancoEconomico.Domain.BanecoAccount", "BanecoAccount")
-                        .WithMany()
-                        .HasForeignKey("BanecoAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("QrBancoEconomico.Domain.Subscriber", "Subscriber")
                         .WithMany()
                         .HasForeignKey("SubscriberId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("BanecoAccount");
 
                     b.Navigation("Subscriber");
                 });
@@ -445,30 +339,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Navigation("Subscriber");
                 });
 
-            modelBuilder.Entity("QrBancoEconomico.Domain.SubscriberBanecoAccount", b =>
-                {
-                    b.HasOne("QrBancoEconomico.Domain.BanecoAccount", "BanecoAccount")
-                        .WithMany("Subscribers")
-                        .HasForeignKey("BanecoAccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QrBancoEconomico.Domain.Subscriber", "Subscriber")
-                        .WithMany("Accounts")
-                        .HasForeignKey("SubscriberId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BanecoAccount");
-
-                    b.Navigation("Subscriber");
-                });
-
-            modelBuilder.Entity("QrBancoEconomico.Domain.BanecoAccount", b =>
-                {
-                    b.Navigation("Subscribers");
-                });
-
             modelBuilder.Entity("QrBancoEconomico.Domain.QrTransaction", b =>
                 {
                     b.Navigation("Payments");
@@ -476,8 +346,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
 
             modelBuilder.Entity("QrBancoEconomico.Domain.Subscriber", b =>
                 {
-                    b.Navigation("Accounts");
-
                     b.Navigation("ApiKeys");
                 });
 #pragma warning restore 612, 618

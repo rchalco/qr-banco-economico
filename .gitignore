@@ -6,3 +6,8 @@ logs/
 .env.*
 !/.env.example
 appsettings.Local.json
+
+# Llave maestra que cifra las credenciales de Baneco en la base. Nunca se sube al repositorio:
+# quien la tenga puede descifrar el usuario y la contraseña del banco. Copia de respaldo en la bóveda.
+secrets/
+*.key

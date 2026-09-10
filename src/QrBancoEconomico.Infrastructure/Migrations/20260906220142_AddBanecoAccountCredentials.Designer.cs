@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QrBancoEconomico.Infrastructure;
 
@@ -11,9 +12,11 @@ using QrBancoEconomico.Infrastructure;
 namespace QrBancoEconomico.Infrastructure.Migrations
 {
     [DbContext(typeof(BanecoDbContext))]
-    partial class BanecoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906220142_AddBanecoAccountCredentials")]
+    partial class AddBanecoAccountCredentials
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -299,10 +302,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Property<int>("RequestsPerMinute")
                         .HasColumnType("int");
 
-                    b.Property<string>("SavingsAccountEncrypted")
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -315,9 +314,6 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ApiKey")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -338,6 +334,11 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("LastUsedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -346,12 +347,16 @@ namespace QrBancoEconomico.Infrastructure.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
+                    b.Property<byte[]>("SecretHash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(32)");
+
                     b.Property<Guid>("SubscriberId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApiKey")
+                    b.HasIndex("PublicId")
                         .IsUnique();
 
                     b.HasIndex("SubscriberId");

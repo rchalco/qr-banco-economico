@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QrBancoEconomico.Infrastructure;
 
@@ -5,6 +6,7 @@ namespace QrBancoEconomico.Api.Controllers;
 
 [ApiController]
 [Route("health")]
+[AllowAnonymous]
 public sealed class HealthController(BanecoDbContext db) : ControllerBase
 {
     [HttpGet]

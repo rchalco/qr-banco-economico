@@ -1,86 +1,71 @@
+using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Options;
 using QrBancoEconomico.Application;
 
 namespace QrBancoEconomico.Infrastructure;
 
-public sealed class BanecoOptions
-{
-    public const string SectionName = "Baneco";
-    public string BaseUrl { get; init; } = "https://apimkt.baneco.com.bo/apiGateway/";
-    public string? BearerToken { get; init; }
-}
-
-public sealed class BanecoGateway(HttpClient http, IOptions<BanecoOptions> options, IBanecoTokenProvider tokenProvider) : IBanecoGateway
+/// <summary>
+/// Cliente de Baneco para las dos operaciones que el proxy expone. Ante un 401 pide al proveedor de
+/// token que renueve y reintenta una sola vez: cubre el caso de un token que venció entre que se
+/// resolvió y que llegó al banco.
+/// </summary>
+public sealed class BanecoGateway(HttpClient http, IBanecoTokenProvider tokenProvider) : IBanecoGateway
 {
     private static readonly JsonSerializerOptions BanecoJsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new BanecoDateOnlyJsonConverter() }
     };
 
-    private readonly BanecoOptions _options = options.Value;
-    private readonly IBanecoTokenProvider _tokenProvider = tokenProvider;
-
-    public async Task<string> EncryptAsync(string text, string aesKey, CancellationToken ct) =>
-        await GetTextAsync($"api/authentication/encrypt?text={Uri.EscapeDataString(text)}&aesKey={Uri.EscapeDataString(aesKey)}", ct);
-    public async Task<string> DecryptAsync(string text, string aesKey, CancellationToken ct) =>
-        await GetTextAsync($"api/authentication/decrypt?text={Uri.EscapeDataString(text)}&aesKey={Uri.EscapeDataString(aesKey)}", ct);
-    public async Task<object> AuthenticateAsync(string userName, string password, CancellationToken ct) =>
-        await SendAsync<object>(HttpMethod.Post, "api/authentication/authenticate", new { userName, password }, ct) ?? new { responseCode = 500, message = "Respuesta vacía del banco" };
-
-    public async Task<GenerateQrResponse> GenerateQrAsync(GenerateQrRequest request, CancellationToken ct)
+    public async Task<GenerateQrResponse> GenerateQrAsync(BanecoGenerateQrRequest request, CancellationToken ct)
     {
         var result = await SendAsync<GenerateQrResponse>(HttpMethod.Post, "api/qrsimple/generateQR", request, ct);
         return result ?? new(500, "Respuesta vacía del banco", null, null);
     }
-    public async Task<ApiResult> CancelQrAsync(string qrId, CancellationToken ct) =>
-        await SendAsync<ApiResult>(HttpMethod.Delete, "api/qrsimple/cancelQR", new { qrId }, ct) ?? new(500, "Respuesta vacía del banco");
-    public async Task<QrStatusResponse> GetQrStatusAsync(string qrId, CancellationToken ct) =>
-        await SendAsync<QrStatusResponse>(HttpMethod.Get, $"api/qrsimple/v2/statusQR/{Uri.EscapeDataString(qrId)}", null, ct) ?? new(500, "Respuesta vacía del banco", 0, []);
+
     public async Task<IReadOnlyList<PaymentQr>> GetPaidQrsAsync(DateOnly date, CancellationToken ct)
     {
         var result = await SendAsync<PaidQrEnvelope>(HttpMethod.Get, $"api/qrsimple/v2/paidQR/{date:yyyyMMdd}", null, ct);
         return result?.PaymentList ?? [];
     }
-    public async Task<object> GetAccountHistoryAsync(AccountHistoryRequest request, CancellationToken ct) =>
-        await SendAsync<object>(HttpMethod.Post, "api/accounts/history", request, ct) ?? new { responseCode = 500, message = "Respuesta vacía del banco" };
-    public async Task<BatchUploadResponse> UploadBatchAsync(BatchUploadRequest request, CancellationToken ct)
-    {
-        return await SendAsync<BatchUploadResponse>(HttpMethod.Post, "api/batchPayment/upload", request, ct) ?? new(500, "Respuesta vacía del banco", null);
-    }
+
     private async Task<T?> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken ct)
     {
-        using var request = CreateRequest(method, path);
-        if (body is not null) request.Content = JsonContent.Create(body);
-        using var response = await http.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>(BanecoJsonOptions, ct);
+        var response = await SendOnceAsync(method, path, body, ct);
+        try
+        {
+            if (response.StatusCode is HttpStatusCode.Unauthorized && await tokenProvider.TryRenewAsync(ct))
+            {
+                // El contenido de una solicitud ya enviada no puede reutilizarse: se arma otra desde cero.
+                response.Dispose();
+                response = await SendOnceAsync(method, path, body, ct);
+            }
+
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<T>(BanecoJsonOptions, ct);
+        }
+        finally
+        {
+            response.Dispose();
+        }
     }
-    private async Task<string> GetTextAsync(string path, CancellationToken ct)
+
+    private async Task<HttpResponseMessage> SendOnceAsync(HttpMethod method, string path, object? body, CancellationToken ct)
     {
-        using var request = CreateRequest(HttpMethod.Get, path);
-        using var response = await http.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(ct);
-    }
-    private HttpRequestMessage CreateRequest(HttpMethod method, string path)
-    {
-        var request = new HttpRequestMessage(method, path);
-        var token = _tokenProvider.GetBearerToken();
+        using var request = new HttpRequestMessage(method, path);
+        // El orden de precedencia (token de la cuenta, llamante, respaldo global) lo decide el proveedor.
+        var token = await tokenProvider.GetBearerTokenAsync(ct);
         if (!string.IsNullOrWhiteSpace(token))
-        {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-        else if (!string.IsNullOrWhiteSpace(_options.BearerToken))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.BearerToken);
-        }
-        return request;
+        if (body is not null)
+            request.Content = JsonContent.Create(body, options: BanecoJsonOptions);
+
+        return await http.SendAsync(request, ct);
     }
+
     private sealed record PaidQrEnvelope(IReadOnlyList<PaymentQr> PaymentList, int ResponseCode, string Message);
 
     private sealed class BanecoDateOnlyJsonConverter : JsonConverter<DateOnly>

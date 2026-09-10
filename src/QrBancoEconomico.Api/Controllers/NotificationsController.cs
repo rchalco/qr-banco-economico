@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QrBancoEconomico.Application;
@@ -6,8 +7,13 @@ using QrBancoEconomico.Infrastructure;
 
 namespace QrBancoEconomico.Api.Controllers;
 
+/// <summary>
+/// Callbacks del banco. Requieren una API Key propia con alcance <c>notifications:write</c>,
+/// emitida al suscriptor que representa a Baneco y distinta de las claves de los canales consumidores.
+/// </summary>
 [ApiController]
 [Route("api/notifications")]
+[Authorize(Policy = ApiScopes.NotificationsWrite)]
 public sealed class NotificationsController(BanecoDbContext db) : ControllerBase
 {
     [HttpPost("qr-payments")]
