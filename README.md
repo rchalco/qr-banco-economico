@@ -20,6 +20,54 @@ dotnet restore QrBancoEconomico.slnx
 dotnet run --project src/QrBancoEconomico.Api
 ```
 
+### Dirección y puerto de escucha
+
+La sección `Service` fija la interfaz y el puerto de Kestrel. `Host` admite `0.0.0.0` (o `*`, `::`) para
+todas las interfaces, `localhost` para solo loopback, o una IP concreta de la máquina para publicar el
+servicio en una sola tarjeta de red:
+
+```jsonc
+"Service": { "Host": "10.20.30.40", "Port": 8443 }
+```
+
+Equivalente por variables de entorno, que es lo recomendado por ambiente:
+
+```bash
+Service__Host="10.20.30.40" Service__Port="8443" dotnet run --project src/QrBancoEconomico.Api
+```
+
+Reglas de precedencia y validación:
+
+- Con `Service:Host` o `Service:Port` definidos, la escucha explícita **tiene prioridad** sobre
+  `ASPNETCORE_URLS`, `--urls` y el `applicationUrl` de `launchSettings.json`.
+- Si se omiten ambos, la API no toca Kestrel y manda `ASPNETCORE_URLS` o `launchSettings.json`; es lo
+  que permite depurar desde el IDE sin editar configuración.
+- Si solo se define `Host`, el puerto es 5000.
+- Una dirección inválida o un puerto fuera de 1-65535 **impiden el arranque** con un mensaje explícito:
+  arrancar escuchando donde nadie espera al servicio es peor que no arrancar. No se admiten nombres DNS.
+- Si la IP configurada no está asignada a ninguna interfaz local se registra una advertencia al
+  arrancar, antes de que Kestrel falle con el opaco «Cannot assign requested address».
+- Detrás de un proxy inverso (nginx, IIS), escuche en `localhost` y publique solo el proxy: así el
+  puerto de la aplicación no queda expuesto en la red.
+
+Al arrancar, la consola indica la interfaz configurada y la dirección real ya enlazada:
+
+```text
+[INF] Kestrel escucha en http://127.0.0.1:5321 (una interfaz concreta), según la sección Service.
+[INF] Logs de error en /srv/qr-banco-economico/logs (un archivo por día: errors-<yyyyMMdd>.log). Hoy: /srv/qr-banco-economico/logs/errors-20260913.log
+[INF] Now listening on: http://127.0.0.1:5321
+[INF] Servicio escuchando en http://127.0.0.1:5321  (IP: 127.0.0.1, puerto: 5321)
+```
+
+La última línea se lee del servidor después del enlace, de modo que refleja lo que realmente atiende
+aunque la dirección venga de `ASPNETCORE_URLS`. Serilog escribe en consola a partir de `Information`;
+el archivo `logs/errors-*.log` sigue guardando solo errores, con rotación diaria.
+
+La ruta de los logs está anclada al *content root* de la aplicación, no al directorio de trabajo del
+proceso: un servicio de systemd o un publicado que se lance desde otra carpeta deja los logs en el
+mismo sitio. Se anuncia antes de enlazar el puerto, así que la ruta está en pantalla incluso si el
+arranque falla.
+
 La creación y actualización del esquema se realizan mediante las migraciones siguientes.
 
 Para crear una migración cuando cambie el modelo:

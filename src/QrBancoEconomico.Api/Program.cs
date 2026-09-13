@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using QrBancoEconomico.Api;
+using QrBancoEconomico.Api.Hosting;
 using QrBancoEconomico.Api.Security;
 using QrBancoEconomico.Application;
 using QrBancoEconomico.Infrastructure;
@@ -10,20 +11,22 @@ using Serilog.Context;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
-// Configure Kestrel to listen on a port specified in configuration (appsettings.json)
-builder.WebHost.ConfigureKestrel((context, options) =>
-{
-    var port = context.Configuration.GetValue<int?>("Service:Port");
-    if (port.HasValue && port.Value > 0)
-    {
-        options.ListenAnyIP(port.Value);
-    }
-});
+// El .env se carga antes que nada: la interfaz de escucha también se configura desde ahí.
 builder.Configuration.AddDotEnvFileIfPresent(builder.Environment.ContentRootPath);
+// Interfaz y puerto de Kestrel (sección Service). Sin configurar, mandan ASPNETCORE_URLS y launchSettings.
+var serviceEndpoint = builder.ConfigureServiceEndpoint();
+// Serilog resuelve las rutas relativas contra el directorio de trabajo del proceso, que al publicar o
+// correr como servicio no tiene por qué ser el de la aplicación. Anclarla al content root evita que
+// los logs terminen dispersos según desde dónde se lanzó el servicio.
+var logFilePath = Path.Combine(builder.Environment.ContentRootPath, "logs", "errors-.log");
 builder.Host.UseSerilog((_, _, loggerConfiguration) => loggerConfiguration
     .MinimumLevel.Information()
     .Enrich.FromLogContext()
-    .WriteTo.File("logs/errors-.log", rollingInterval: RollingInterval.Day,
+    // Serilog reemplaza los proveedores por defecto: sin este sink la consola queda muda y no se ve
+    // ni dónde escucha el servicio ni por qué no arrancó.
+    .WriteTo.Console(outputTemplate:
+        "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day,
         restrictedToMinimumLevel: LogEventLevel.Error,
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"));
 builder.Services.AddControllers();
@@ -91,6 +94,11 @@ builder.Services.AddHttpClient<IBanecoGateway, BanecoGateway>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 var app = builder.Build();
+serviceEndpoint?.LogTo(app.Logger);
+// Dónde buscar el rastro cuando algo falle: se anuncia al arrancar, no cuando ya hay que buscarlo.
+app.LogDiagnosticsLocation(logFilePath);
+// Al terminar el enlace, deja en consola la IP y el puerto reales, venga de donde venga la configuración.
+app.LogListeningAddresses();
 app.Use(async (context, next) =>
 {
     var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
